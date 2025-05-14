@@ -1,0 +1,40 @@
+%{
+#include<stdio.h>
+%}
+
+KEYWORD "int"
+IDENTIFIER [a-zA-Z_][a-zA-Z0-9_]*
+NUMBER [0-9]*
+ARITHMETIC_OPERATOR [+\-*/]
+ASSIGNMENT_OPERATOR "="
+SEMICOLON ";"
+SEPARATOR ","
+BLOCK_START "{"
+BLOCK_END   "}"
+
+%%
+{KEYWORD} {printf("<KEYWORD> %s \n",yytext);}
+{IDENTIFIER} {printf("<IDENTIFIER> %s \n",yytext);}
+{NUMBER} {printf("<NUMBER> %s \n",yytext);}
+{ARITHMETIC_OPERATOR} {printf("<ARITHMETIC_OPERATOR> %s \n",yytext);}
+{ASSIGNMENT_OPERATOR} {printf("<ASSIGNMENT_OPERATOR> %s \n",yytext);}
+{SEMICOLON} {printf("<SEMICOLON> %s \n",yytext);}
+{SEPARATOR} {printf("<SEPARATOR> %s \n",yytext);}
+{BLOCK_START} {printf("<BLOCK_START> %s \n",yytext);}
+{BLOCK_END} {printf("<BLOCK_END> %s \n",yytext);}
+%%
+
+int yywrap(){
+    return 1;
+}
+int main(){
+    printf("Enter the C code:\n");
+    yylex();
+    return 0;
+}
+
+flex lex1.l --- complie
+gcc lex.yy.c -o aaa --- complie
+./aaa --- run
+
+
