@@ -1,0 +1,115 @@
+#include<iostream>
+#include<vector>
+#include<string>
+#include<map>
+#include<fstream>
+#include<cctype>
+#include<algorithm>
+#include<sstream>
+
+using namespace std;
+
+bool isIn(vector<string>& vec,string& word){
+    return find(vec.begin(),vec.end(),word) != vec.end();
+}
+
+vector<string> tokenize(const string& line) {
+    vector<string> tokens;
+    stringstream ss(line);
+    string word;
+
+    while (ss >> word) {
+        size_t pos;
+        // Split by comma if present (e.g., "AREG,B" => "AREG", "B")
+        while ((pos = word.find(',')) != string::npos) {
+            if (pos > 0) tokens.push_back(word.substr(0, pos));
+            word = word.substr(pos + 1);
+        }
+        if (!word.empty()) tokens.push_back(word);
+    }
+
+    return tokens;
+}
+
+int main(){
+    vector<string> AD = {"START","END","LTORG"};
+    vector<string> IS = {"READ","ADD","SUB","MULT","MOVE","MOVER","STOP","BC","COMP"};
+    vector<string> DL = {"DS","DC"};
+    vector<string> REG = {"AREG","BREG","CREG","DREG"};
+
+    map<string,int> SymbolTab;
+    ifstream infile("input.txt");
+
+    if(!infile){
+        cerr<<"Error: cannot open input.txt file"<<endl;
+        return 1;
+    }
+
+    string line;
+    int lc = 0;
+
+    while(getline(infile,line)){
+        //line = trim(line);
+        if(line.empty()) continue;
+
+        vector<string> tokens = tokenize(line);
+        if(tokens.empty()) continue;
+
+        if(tokens[0] == "START"){
+            if(tokens.size() > 1){
+                lc = stoi(tokens[1]);
+            }
+        }
+
+        string label = "";
+        if(!isIn(AD,tokens[0]) && !isIn(IS,tokens[0]) && !isIn(DL,tokens[0]) && !isIn(REG,tokens[0])){
+            label = tokens[0];
+            if(tokens.size() >= 3 && tokens[1] == "EQU"){
+                if(isdigit(tokens[2][0])){
+                    SymbolTab[label] = stoi(tokens[2]);
+                }
+                else if(SymbolTab.find(tokens[2]) != SymbolTab.end()){
+                    SymbolTab[label] = SymbolTab[tokens[2]];
+                }
+                continue;
+            }
+            else{
+                SymbolTab[label] = lc;
+                tokens.erase(tokens.begin());
+            }
+        }
+
+        if(!tokens.empty()){
+            string opcode = tokens[0];
+            if(find(IS.begin(),IS.end(),opcode) != IS.end()){
+                lc += 1;
+            }
+            else if(opcode == "DS" && tokens.size() > 1){
+                lc += stoi(tokens[1]);
+            }
+            else if(opcode == "DC"){
+                lc += 1;
+            }
+        }
+    }
+
+    infile.close();
+
+    ofstream outfile("sym.txt");
+    if(!outfile){
+        cerr<<"ERROR: Cannot write to sym.txt"<<endl;
+        return 1;
+    }
+
+    outfile<<"Symbol Table : \n\n Name\tAddress\n";
+
+    for(auto entry : SymbolTab){
+        outfile<<entry.first<<"\t"<<entry.second<<endl;
+    }
+
+    outfile.close();
+
+    cout<<"Symbol table generated"<<endl;
+}
+
+//g++ -std=c++11 SymbolTable.cpp -o SymbolTable
