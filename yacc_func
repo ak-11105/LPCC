@@ -1,0 +1,113 @@
+#built-in function
+
+4b.l
+
+%{
+#include "calc.tab.h"
+#include <stdlib.h>
+#include <string.h>
+%}
+
+%%
+
+"sqrt"              { return SQRT; }
+"strlen"            { return STRLEN; }
+"sin"               { return SIN; }
+"cos"               { return COS; }
+"pow"               { return POW; }
+"log"               { return LOG; }
+
+[0-9]+              { yylval.ival = atoi(yytext); return NUM; }
+
+\"[^\"]*\"          {
+                      yylval.sval = strdup(yytext + 1);
+                      yylval.sval[strlen(yylval.sval) - 1] = '\0';
+                      return STR;
+                   }
+
+[ \t]               { /* ignore whitespace */ }
+\n                  { return '\n'; }
+.                   { return yytext[0]; }
+
+%%
+
+int yywrap(void) {
+    return 1;
+}
+
+
+
+4b.y file 
+
+%{
+#include <stdio.h>
+#include <stdlib.h>
+#include <math.h>
+#include <string.h>
+
+int yylex(void);
+void yyerror(const char *s);
+%}
+
+%union {
+    int ival;
+    char *sval;
+}
+
+%token <ival> NUM
+%token <sval> STR
+%token SQRT STRLEN SIN COS POW LOG
+
+%type <ival> expr func_call
+
+%start input
+
+%%
+
+input:
+    expr '\n' { printf("Result: %d\n", $1); exit(0); }
+;
+
+expr:
+    NUM             { $$ = $1; }
+  | func_call       { $$ = $1; }
+;
+
+func_call:
+    SQRT '(' expr ')'       { $$ = (int)sqrt($3); }
+  | STRLEN '(' STR ')'      { $$ = strlen($3); free($3); }
+  | SIN '(' expr ')'        { $$ = (int)sin($3); }
+  | COS '(' expr ')'        { $$ = (int)cos($3); }
+  | LOG '(' expr ')'        { $$ = (int)log($3); }
+  | POW '(' expr ',' expr ')' { $$ = (int)pow($3, $5); }
+;
+
+%%
+
+void yyerror(const char *s) {
+    fprintf(stderr, "Error: %s\n", s);
+}
+
+int main(void) {
+    printf("Enter expression:\n");
+    yyparse();
+    return 0;
+}
+
+
+
+
+
+Compile command 
+lex 4a.l
+yacc -d 4a.y
+cc lex.yy.c  y.tab.c
+./a.out
+
+
+or 
+
+bison -d 4a.y
+flex 4a.l
+gcc -o 4a 4a.tab.yy.c -lfl -lm
+./4a
