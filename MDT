@@ -1,0 +1,71 @@
+#include<iostream>
+#include<string>
+#include<vector>
+#include<sstream>
+using namespace std;
+
+// Define a structure to represent an entry in the MDT
+struct MDTEntry {
+    int index;  // Index of the macro instruction in the MDT
+    string definition;  // Macro instruction definition
+};
+
+// Function to extract macro instructions and populate the MDT table
+vector<MDTEntry> macroName(const string& file) {
+    vector<MDTEntry> mdtTable;  // MDT table to store macro instructions
+    istringstream fileStream(file);
+    string line;
+    int index = 1;  // Index for the MDT entries
+
+    while (getline(fileStream, line)) {
+        istringstream lineStream(line);
+        string word;
+        lineStream >> word;
+
+        if (word == "MACRO") {
+            // Skip the macro name since we are only interested in the instructions
+            string macroName;
+            lineStream >> macroName;
+
+            // Read the macro body and store each instruction with its index
+            while (getline(fileStream, line)) {
+                if (line.find("MEND") != string::npos) {
+                    // Create MDTEntry object and push to the table for MEND
+                    MDTEntry mdtEntry = {index++, "MEND"};
+                    mdtTable.push_back(mdtEntry);
+                    break;  // End of macro body
+                }
+                // Create MDTEntry object for each instruction and push to the table
+                MDTEntry mdtEntry = {index++, line};
+                mdtTable.push_back(mdtEntry);
+            }
+        }
+    }
+    return mdtTable;
+}
+
+int main() {
+    vector<MDTEntry> mdtTable;  // MDT Table to hold macro instructions
+    string file = "", line;
+
+    cout << "Enter the code for Macro (type END to stop input):" << endl;
+    while (getline(cin, line)) {
+        if (line == "END") break;  // Sentinel to stop input
+        file += line + "\n";  // Add each line to the file string
+    }
+
+    // Generate the MDT table
+    mdtTable = macroName(file);
+
+    // Display the MDT Table
+    cout << "\nMDT Table:\n";
+    cout << "------------------------------------------------\n";
+    for (int i = 0; i < mdtTable.size(); i++) {
+        cout << mdtTable[i].index << " " << mdtTable[i].definition << endl;
+    }
+
+    // Display total macro instructions in MDT table
+    cout << "------------------------------------------------\n";
+    cout << "Total Instructions: " << mdtTable.size() << endl;
+    cout << "------------------------------------------------\n";
+}
