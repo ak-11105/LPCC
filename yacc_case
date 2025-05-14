@@ -1,0 +1,76 @@
+#lexer.l
+
+%{
+#include "y.tab.h"
+%}
+
+%%
+
+[a-z]    { yylval.c = yytext[0]; return LOWERCASE; }   // Match lowercase letters
+[A-Z]    { yylval.c = yytext[0]; return UPPERCASE; }   // Match uppercase letters
+[ \t\n]  { /* Ignore whitespace */ }
+.        { return yytext[0]; }  // For any other character
+
+%%
+
+int yywrap() {
+    return 1;
+}
+
+#parser.y
+
+%{
+#include <stdio.h>
+#include <ctype.h>
+%}
+
+%union {
+    char c;  // To hold individual characters
+}
+
+%token LOWERCASE
+%token UPPERCASE
+
+%%
+
+input:
+    | input line
+    ;
+
+line:
+    LOWERCASE {
+        putchar(toupper($1));  // Convert lowercase to uppercase
+    }
+    | UPPERCASE {
+        putchar(tolower($1));  // Convert uppercase to lowercase
+    }
+    | . { putchar($1); }  // For any other character, print as it is
+    ;
+
+%%
+
+int main() {
+    printf("Enter a string to convert case:\n");
+    yyparse();  // Call the parser
+    return 0;
+}
+
+int yyerror(const char *msg) {
+    fprintf(stderr, "Error: %s\n", msg);
+    return 0;
+}
+
+
+Compile command 
+lex 4a.l
+yacc -d 4a.y
+cc lex.yy.c  y.tab.c
+./a.out
+
+
+or 
+
+bison -d 4a.y
+flex 4a.l
+gcc -o 4a 4a.tab.yy.c -lfl -lm
+./4a
