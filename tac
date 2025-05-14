@@ -11,21 +11,22 @@ def generate_tac(expression):
     operands = []  # Stack for operands
     temp_count = 1  # Temporary variable counter
 
-    # Tokenize the expression
+    # Tokenize the expression, handle multi-digit numbers
     tokens = []
     token = ''
     for char in expression:
-        if char in '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ':
-            token += char  # Continue building operand
-        else:
+        if char.isalnum():  # If it's a part of a variable or number
+            token += char
+        elif char in '*/+-()':  # If it's an operator or parenthesis
             if token:
                 tokens.append(token)
                 token = ''
-            if char in '*/+-()':
-                tokens.append(char)  # Add operators and parentheses
-    if token:
+            tokens.append(char)
+    
+    if token:  # Don't forget the last token
         tokens.append(token)
 
+    # Process tokens
     for token in tokens:
         if token.isalnum():  # Operand (variable or constant)
             operands.append(token)
@@ -42,7 +43,7 @@ def generate_tac(expression):
                 print(f'{temp_var} = {operand1} {operator} {operand2}')
             stack.pop()  # Pop the '('
         else:  # Operator (+, -, *, /)
-            while stack and precedence_of(stack[-1]) <= precedence_of(token):
+            while stack and stack[-1] != '(' and precedence_of(stack[-1]) <= precedence_of(token):
                 operator = stack.pop()
                 operand2 = operands.pop()
                 operand1 = operands.pop()
