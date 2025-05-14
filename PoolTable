@@ -1,0 +1,102 @@
+#include <iostream>
+#include <fstream>
+#include <sstream>
+#include <vector>
+#include <string>
+#include <map>
+
+using namespace std;
+
+vector<string> tokenize(const string& line) {
+    vector<string> tokens;
+    stringstream ss(line);
+    string word;
+
+    while (ss >> word) {
+        size_t pos;
+        while ((pos = word.find(',')) != string::npos) {
+            if (pos > 0) tokens.push_back(word.substr(0, pos));
+            word = word.substr(pos + 1);
+        }
+        if (!word.empty()) tokens.push_back(word);
+    }
+
+    return tokens;
+}
+
+int main() {
+    vector<string> programLines;
+    ifstream infile("input.txt");
+    if (!infile) {
+        cerr << "❌ Error: Cannot open input.txt file.\n";
+        return 1;
+    }
+
+    string line;
+    while (getline(infile, line)) {
+        programLines.push_back(line);
+    }
+    infile.close();
+
+    map<string, int> literalTable;
+    vector<int> poolTable;
+    int lc = 0;
+    int literalIndex = 0;
+
+    for (const string& l : programLines) {
+        vector<string> tokens = tokenize(l);
+        if (tokens.empty()) continue;
+
+        if (tokens[0] == "START" && tokens.size() > 1) {
+            lc = stoi(tokens[1]);
+            continue;
+        }
+
+        // Collect literals
+        for (const string& tok : tokens) {
+            if (tok.size() >= 3 && tok[0] == '=' && (tok[1] == '\'' || tok[1] == '"')) {
+                if (literalTable.find(tok) == literalTable.end()) {
+                    literalTable[tok] = -1;
+                }
+            }
+        }
+
+        // If LTORG or END found, assign addresses and create pool
+        if (tokens[0] == "LTORG" || tokens[0] == "END") {
+            poolTable.push_back(literalIndex + 1);  // 1-based indexing for pool table
+
+            for (auto& lit : literalTable) {
+                if (lit.second == -1) {
+                    lit.second = lc++;
+                    literalIndex++;
+                }
+            }
+        } else {
+            lc++;
+        }
+    }
+
+    // Write pool table to file
+    ofstream outfile("pool.txt");
+    if (!outfile) {
+        cerr << "❌ Error: Cannot write to pool.txt\n";
+        return 1;
+    }
+
+    outfile << "\tPool Table\nIndex\n";
+    for (int idx : poolTable) {
+        outfile << idx << "\n";
+    }
+
+    outfile.close();
+
+    cout << "✅ Pool Table generated in pool.txt\n";
+    cout << "Pool Table:\nIndex\n";
+    for (int idx : poolTable) {
+        cout << idx << "\n";
+    }
+
+    return 0;
+}
+//g++ -std=c++11 PoolTable.cpp -o PoolTable
+//./PoolTable
