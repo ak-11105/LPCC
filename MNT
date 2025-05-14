@@ -1,0 +1,54 @@
+
+#include<iostream>
+#include<string>
+#include<vector>
+#include<sstream>
+using namespace std;
+
+vector<string> macroName(const string& file, vector<int>& parametersCnt) {
+    vector<string> macroNames;
+    istringstream fileStream(file);
+    string line;
+
+    while (getline(fileStream, line)) {
+        istringstream lineStream(line);
+        string word;
+        lineStream >> word;
+
+        if (word == "MACRO") {
+            string macroName;
+            lineStream >> macroName; // Get macro name
+            macroNames.push_back(macroName);
+
+            int count = 0;
+            string param;
+            while (lineStream >> param) {
+                count++; // count each parameter
+            }
+            parametersCnt.push_back(count);
+        }
+    }
+    return macroNames;
+}
+
+int main() {
+    vector<string> macroNames;
+    vector<int> parametersCnt;
+    string file = "", line;
+    cout << "Enter the code for Macro (type END to stop input):" << endl;
+    while (getline(cin, line)) {
+        if (line == "END") break;  // Sentinel to stop input
+        file += line + "\n";
+    }
+
+    macroNames = macroName(file, parametersCnt);
+    cout << "\nMacro Names:\n";
+    cout << "------------------\n";
+    for (int i = 0; i < macroNames.size(); i++) {
+        cout << macroNames[i] <<" : "<< parametersCnt[i]<< endl;
+        
+    }
+    cout << "------------------\n";
+    cout << "Total Macros: " << macroNames.size() << endl;
+    cout << "------------------\n";
+}
