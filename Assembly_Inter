@@ -1,0 +1,131 @@
+#include <iostream>
+#include <fstream>
+#include <sstream>
+#include <map>
+#include <vector>
+#include <iomanip>
+
+using namespace std;
+
+// Helper function to tokenize a line
+vector<string> tokenize(const string& line) {
+    vector<string> tokens;
+    string token;
+    stringstream ss(line);
+    while (getline(ss, token, ' ')) {
+        if (!token.empty())
+            tokens.push_back(token);
+    }
+    return tokens;
+}
+
+// Check if token is a literal
+bool isLiteral(const string& token) {
+    return token.size() > 2 && token[0] == '=' && (token[1] == '\'' || token[1] == '"');
+}
+
+int main() {
+    map<string, string> IS = {
+        {"STOP", "00"}, {"ADD", "01"}, {"SUB", "02"}, {"MULT", "03"},
+        {"MOVER", "04"}, {"MOVEM", "05"}, {"COMP", "06"}, {"BC", "07"},
+        {"DIV", "08"}, {"READ", "09"}, {"PRINT", "10"}
+    };
+
+    map<string, string> DL = { {"DC", "01"}, {"DS", "02"} };
+    map<string, string> AD = { {"START", "01"}, {"END", "02"}, {"LTORG", "03"} };
+    map<string, int> REG = { {"AREG", 1}, {"BREG", 2}, {"CREG", 3}, {"DREG", 4} };
+
+    map<string, int> symtab;
+    vector<string> literals;
+    vector<int> literalAddresses;
+
+    ifstream infile("input.txt");
+    ofstream icfile("intermediate.txt");
+
+    if (!infile) {
+        cerr << "❌ Error: Cannot open input.txt" << endl;
+        return 1;
+    }
+
+    int lc = 0;
+    int symIdx = 1, litIdx = 1;
+
+    string line;
+    while (getline(infile, line)) {
+        vector<string> tokens = tokenize(line);
+        if (tokens.empty()) continue;
+
+        // Handle START
+        if (tokens[0] == "START") {
+            lc = stoi(tokens[1]);
+            icfile << "(AD," << AD["START"] << ") (C," << lc << ")\n";
+            continue;
+        }
+
+        // Handle END or LTORG (treat literals)
+        if (tokens[0] == "END" || tokens[0] == "LTORG") {
+            icfile << "(AD," << AD[tokens[0]] << ")\n";
+            for (int i = 0; i < literals.size(); i++) {
+                literalAddresses.push_back(lc);
+                icfile << lc++ << " (DL,01) (C," << literals[i].substr(2, literals[i].length() - 3) << ")\n";
+            }
+            literals.clear();
+            continue;
+        }
+
+        int index = 0;
+        string label = "", opcode = "", op1 = "", op2 = "";
+
+        if (IS.find(tokens[0]) != IS.end() || DL.find(tokens[0]) != DL.end()) {
+            opcode = tokens[index++];
+        } else {
+            label = tokens[index++];
+            if (symtab.find(label) == symtab.end()) {
+                symtab[label] = lc;
+            }
+            opcode = tokens[index++];
+        }
+
+        if (index < tokens.size()) op1 = tokens[index++];
+        if (index < tokens.size()) op2 = tokens[index++];
+
+        // Print LC
+        icfile << lc++ << " ";
+
+        // Imperative statements
+        if (IS.find(opcode) != IS.end()) {
+            icfile << "(IS," << IS[opcode] << ") ";
+            if (REG.find(op1) != REG.end()) {
+                icfile << "(" << REG[op1] << ") ";
+            } else if (!op1.empty()) {
+                if (symtab.find(op1) == symtab.end()) symtab[op1] = -1;
+                icfile << "(S," << op1 << ") ";
+            }
+
+            if (isLiteral(op2)) {
+                literals.push_back(op2);
+                icfile << "(L," << literals.size() << ")";
+            } else if (!op2.empty()) {
+                if (symtab.find(op2) == symtab.end()) symtab[op2] = -1;
+                icfile << "(S," << op2 << ")";
+            }
+        }
+
+        // Declarative
+        else if (DL.find(opcode) != DL.end()) {
+            icfile << "(DL," << DL[opcode] << ") ";
+            icfile << "(C," << op1 << ")";
+        }
+
+        icfile << "\n";
+    }
+
+    infile.close();
+    icfile.close();
+
+    cout << "✅ Intermediate code generated in intermediate.txt\n";
+    return 0;
+}
+
+//g++ -std=c++11 AssemInter.cpp -o IntermediateCode
+//./IntermediateCode
