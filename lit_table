@@ -1,0 +1,108 @@
+#include <iostream>
+#include <fstream>
+#include <sstream>
+#include <vector>
+#include <string>
+#include <map>
+#include <algorithm>
+
+using namespace std;
+
+// Tokenizer function to split line into tokens
+vector<string> tokenize(const string& line) {
+    vector<string> tokens;
+    stringstream ss(line);
+    string word;
+
+    while (ss >> word) {
+        size_t pos;
+        // Split by comma (e.g., "AREG,'5'" => "AREG", "'5'")
+        while ((pos = word.find(',')) != string::npos) {
+            if (pos > 0) tokens.push_back(word.substr(0, pos));
+            word = word.substr(pos + 1);
+        }
+        if (!word.empty()) tokens.push_back(word);
+    }
+
+    return tokens;
+}
+
+int main() {
+    map<string, int> literalTable;
+    ifstream infile("input.txt");
+
+    if (!infile) {
+        cerr << "Error: Cannot open input.txt file" << endl;
+        return 1;
+    }
+
+    string line;
+    int lc = 0;
+    vector<string> lines;
+
+    // First pass: Read all lines and collect literals
+    while (getline(infile, line)) {
+        lines.push_back(line);
+    }
+
+    infile.close();
+
+    for (const string& l : lines) {
+        vector<string> tokens = tokenize(l);
+        if (tokens.empty()) continue;
+
+        if (tokens[0] == "START" && tokens.size() > 1) {
+            lc = stoi(tokens[1]);
+            continue;
+        }
+
+        // Collect literals
+        for (const string& tok : tokens) {
+            if (tok.size() >= 3 && tok[0] == '=' && (tok[1] == '\'' || tok[1] == '"')) {
+                if (literalTable.find(tok) == literalTable.end()) {
+                    literalTable[tok] = -1;  // Placeholder
+                }
+            }
+        }
+
+        if (tokens[0] == "LTORG") {
+            for (auto& lit : literalTable) {
+                if (lit.second == -1) {
+                    lit.second = lc++;
+                }
+            }
+        } else if (tokens[0] != "END") {
+            // Increment LC assuming 1 instruction per line
+            lc++;
+        }
+    }
+
+    // After END: assign addresses to any remaining literals
+    for (auto& lit : literalTable) {
+        if (lit.second == -1) {
+            lit.second = lc++;
+        }
+    }
+
+    // Write literal table to file
+    ofstream outfile("lit.txt");
+    if (!outfile) {
+        cerr << "ERROR: Cannot write to lit.txt" << endl;
+        return 1;
+    }
+
+    outfile << "\tLiteral Table\nName\tAddress\n";
+    for (const auto& entry : literalTable) {
+        outfile << entry.first << "\t" << entry.second << "\n";
+    }
+
+    outfile.close();
+
+    cout << "✅ Literal table generated in lit.txt\n";
+    cout << "Literal Table:\nName\tAddress\n";
+    for (const auto& entry : literalTable) {
+        cout << entry.first << "\t" << entry.second << "\n";
+    }
+
+    return 0;
+}
